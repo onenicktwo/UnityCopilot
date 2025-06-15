@@ -1,5 +1,4 @@
-﻿// Assets/Editor/UnityCopilotWindow.cs
-// Unity 2021/2022 compatible – requires the Newtonsoft Json package
+﻿// Unity 2021/2022 compatible – requires the Newtonsoft Json package
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,7 +15,6 @@ using UnityEngine;
 
 public class UnityCopilotWindow : EditorWindow
 {
-    // UI state
     private string _prompt = "Ask Copilot…";
     private string _explanation = "";
     private string _raw = "";
@@ -45,7 +43,6 @@ public class UnityCopilotWindow : EditorWindow
         if (GUILayout.Button("Generate") && !string.IsNullOrWhiteSpace(_prompt))
             _ = HandlePrompt(_prompt);
 
-        // raw response (selectable, copy-able)
         _scroll = EditorGUILayout.BeginScrollView(_scroll, GUILayout.Height(260));
         EditorGUILayout.SelectableLabel(_raw, EditorStyles.wordWrappedLabel, GUILayout.ExpandHeight(true));
         EditorGUILayout.EndScrollView();
@@ -89,7 +86,6 @@ public class UnityCopilotWindow : EditorWindow
         _explanation = reply.explanation;
         Repaint();
 
-        // run scene actions after compile, once
         void AfterCompile(object _) { ExecuteActions(reply.actions); CompilationPipeline.compilationFinished -= AfterCompile; }
         CompilationPipeline.compilationFinished += AfterCompile;
 
@@ -198,7 +194,7 @@ public class UnityCopilotWindow : EditorWindow
             }
         }
 
-        // ---------- 3. Ensure visible mesh when user asks for renderer only ----------
+        // 3. Ensure visible mesh when user asks for renderer only
         bool hasRenderer = go.GetComponent<MeshRenderer>();
         bool hasFilter = go.GetComponent<MeshFilter>();
 
@@ -212,7 +208,7 @@ public class UnityCopilotWindow : EditorWindow
             Undo.AddComponent<MeshRenderer>(go);
         }
 
-        // ---------- 4. Finalise ----------
+        // 4. Finalise
         Undo.RegisterCreatedObjectUndo(go, "Copilot create GameObject");
         Selection.activeObject = go;
     }
@@ -237,7 +233,7 @@ public class UnityCopilotWindow : EditorWindow
         return Undo.AddComponent(go, t);        // ensures proper undo
     }
 
-    // ---------------- salvage helpers ----------------
+    // salvage helpers
     private static string ExtractJsonBlock(string text)
     {
         int start = text.IndexOf('{');
