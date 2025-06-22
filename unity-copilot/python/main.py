@@ -2,52 +2,68 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests, os
-from unity_docs import retrieve
+from python.unity_docs import retrieve
+import json, re
 
 # Model / Ollama settings
 MODEL      = os.getenv("OLLAMA_MODEL", "codellama:13b-instruct-q4_K_M")
 OLLAMA_URL = os.getenv("OLLAMA_URL",  "http://localhost:11434/api/chat")
+CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*([\s\S]*?)```$", re.MULTILINE)
 
 # Prompt pieces
 SYSTEM_HEADER = """\
 You are UnityCopilot, a Unity-specific coding assistant.
 RULES:
-• Reply with ONE valid JSON object, no markdown.
-• Property names exactly: "files", "actions", "explanation".
+You MUST return exactly one valid JSON object and NOTHING else. 
+No markdown, no comments, no trailing characters.
+Property names exactly: "files", "actions", "explanation".
 SCHEMA:
 {
   "files":[{"path":"<string>","content":"<string>"}],
   "actions":[{"type":"create_gameobject","name":"<string>","components":[ ... ]}],
   "explanation":"<string>"
 }
-EXAMPLES:
+
+Example of a Default Unity Script:
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Test : MonoBehaviour
+{
+    // Start is called before the first frame update
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+}
+Example of user input and what your output should be:
 """
 
-EXAMPLES = [
-    # 1) spinning cube
-    {"role":"user","content":"create a spinning cube"},
-    {"role":"assistant","content":"""{
-        "files":[
-          {"path":"Assets/Scripts/Spin.cs",
-           "content":"using UnityEngine; public class Spin : MonoBehaviour{void Update(){transform.Rotate(0,90*Time.deltaTime,0);}}"}
-        ],
-        "actions":[
-          {"type":"create_gameobject","name":"SpinningCube","components":["Spin","MeshRenderer","BoxCollider"]}
-        ],
-        "explanation":"Cube rotates 90°/sec around Y and has collider."
-    }"""},
-    # 2) health bar
-    {"role":"user","content":"make me a health bar UI"},
-    {"role":"assistant","content":"""{
-        "files":[
-          {"path":"Assets/Scripts/HealthBar.cs",
-           "content":"using UnityEngine.UI; public class HealthBar : MonoBehaviour{public Image fill;public void Set(float v){fill.fillAmount=v;}}"}
-        ],
-        "actions":[
-          {"type":"create_gameobject","name":"Canvas","components":["Canvas","CanvasScaler","GraphicRaycaster","HealthBar"]}
-        ],
-        "explanation":"Creates world-space canvas with HealthBar script."
-    }"""},
+FEW_SHOTS = [
+  { "role":"user",
+    "content":"make a blue spinning cube" },
+  { "role":"assistant",
+    "content": r'''{
+  "files":[
+    {"path":"Assets/Scripts/SpinningCube.cs",
+     "content":"using UnityEngine;\nusing System.Collections;\n\npublic class SpinningCube : MonoBehaviour {\n  private float speed = 30f;\n  private IEnumerator Start() {\n    float t = 0f;\n    while (true) {\n      bool reverse = t >= 5f;\n      transform.Rotate(Vector3.up, (reverse?-speed:speed) * Time.deltaTime);\n      t += Time.deltaTime;\n      yield return null;\n    }\n  }\n}"}],
+  "actions":[
+    {"type":"create_gameobject",
+     "name":"SpinningCube",
+     "components":[
+       {"primitive":"Cube"},
+       {"Renderer":{"materialColor":"#0066ff"}},
+       "SpinningCube"
+     ]}],
+  "explanation":"Creates a blue cube and rotates it 30°/s, reversing after 5 s."
+}''' }
 ]
 
 # FastAPI boilerplate
@@ -71,18 +87,49 @@ def chat(req: ChatRequest):
     system_with_docs = SYSTEM_HEADER + "\nRELEVANT_UNITY_DOCS:\n" + docs[:1500]
 
     # 2. assemble final messages list
-    messages = [{"role":"system","content": system_with_docs}] + EXAMPLES + req.messages
+    messages = [{"role":"system","content": system_with_docs}] + FEW_SHOTS + req.messages
 
     payload = {
         "model": MODEL,
         "messages": messages,
         "stream": False,
-        "options": {"format":"json","temperature":0.1,"num_predict": req.max_tokens or 512}
+        "options": {
+            "format":"json",
+            "temperature":0.1,
+            "num_predict": req.max_tokens or 512}
     }
 
     try:
         r = requests.post(OLLAMA_URL, json=payload, timeout=120)
         r.raise_for_status()
-        return {"content": r.json()["message"]["content"]}
+        raw = r.json()["message"]["content"]
+        try:
+            cleaned = validated_json(raw)
+        except ValueError as e:
+            cleaned = raw
+            print("⚠️  JSON fix-up failed:", e)
+        return {"content": cleaned}
     except requests.RequestException as e:
         raise HTTPException(status_code=503, detail=f"Ollama error: {e}")
+    
+def strip_code_fence(text: str) -> str:
+    m = CODE_FENCE_RE.search(text.strip())
+    return m.group(1) if m else text
+
+def comma_patch(text: str) -> str:
+    text = re.sub(r"}\s*\"(?=(files|actions|explanation)\")", r"},\"", text)
+    text = re.sub(r",\s*([\]}])", r"\1", text)
+    return text
+
+def validated_json(text: str) -> str:
+    """Return a *valid* JSON string or raise ValueError."""
+    text = strip_code_fence(text)
+    text = comma_patch(text)
+
+    first, last = text.find("{"), text.rfind("}")
+    if first == -1 or last == -1:
+        raise ValueError("no braces found")
+    text = text[first:last+1]
+
+    json.loads(text)
+    return text

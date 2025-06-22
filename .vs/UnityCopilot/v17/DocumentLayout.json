@@ -7,12 +7,12 @@
       "RelativeMoniker": "D:0:0:{D8962BFC-9E36-14EF-6F9B-5314C033E9EA}|Assembly-CSharp-Editor.csproj|solutionrelative:assets\\editor\\unitycopilotwindow.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D8962BFC-9E36-14EF-6F9B-5314C033E9EA}|Assembly-CSharp-Editor.csproj|C:\\UnityProjects\\UnityCopilot\\assets\\editor\\roslynformatter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D8962BFC-9E36-14EF-6F9B-5314C033E9EA}|Assembly-CSharp-Editor.csproj|solutionrelative:assets\\editor\\roslynformatter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D8962BFC-9E36-14EF-6F9B-5314C033E9EA}|Assembly-CSharp-Editor.csproj|C:\\UnityProjects\\UnityCopilot\\assets\\editor\\copilotfallbacks.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D8962BFC-9E36-14EF-6F9B-5314C033E9EA}|Assembly-CSharp-Editor.csproj|solutionrelative:assets\\editor\\copilotfallbacks.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\UnityProjects\\UnityCopilot\\Assets\\Scripts\\Spin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Spin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D8962BFC-9E36-14EF-6F9B-5314C033E9EA}|Assembly-CSharp-Editor.csproj|C:\\UnityProjects\\UnityCopilot\\assets\\editor\\roslynformatter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D8962BFC-9E36-14EF-6F9B-5314C033E9EA}|Assembly-CSharp-Editor.csproj|solutionrelative:assets\\editor\\roslynformatter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -26,19 +26,20 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "Spin.cs",
-              "DocumentMoniker": "C:\\UnityProjects\\UnityCopilot\\Assets\\Scripts\\Spin.cs",
-              "RelativeDocumentMoniker": "Assets\\Scripts\\Spin.cs",
-              "ToolTip": "C:\\UnityProjects\\UnityCopilot\\Assets\\Scripts\\Spin.cs",
-              "RelativeToolTip": "Assets\\Scripts\\Spin.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAABAAAAAAAAAA==",
+              "DocumentIndex": 1,
+              "Title": "CopilotFallbacks.cs",
+              "DocumentMoniker": "C:\\UnityProjects\\UnityCopilot\\Assets\\Editor\\CopilotFallbacks.cs",
+              "RelativeDocumentMoniker": "Assets\\Editor\\CopilotFallbacks.cs",
+              "ToolTip": "C:\\UnityProjects\\UnityCopilot\\Assets\\Editor\\CopilotFallbacks.cs",
+              "RelativeToolTip": "Assets\\Editor\\CopilotFallbacks.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-15T03:19:18.425Z"
+              "WhenOpened": "2025-06-22T00:59:35.955Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "RoslynFormatter.cs",
               "DocumentMoniker": "C:\\UnityProjects\\UnityCopilot\\Assets\\Editor\\RoslynFormatter.cs",
               "RelativeDocumentMoniker": "Assets\\Editor\\RoslynFormatter.cs",
@@ -46,7 +47,8 @@
               "RelativeToolTip": "Assets\\Editor\\RoslynFormatter.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-15T03:15:52.905Z"
+              "WhenOpened": "2025-06-15T03:15:52.905Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -56,7 +58,7 @@
               "RelativeDocumentMoniker": "Assets\\Editor\\UnityCopilotWindow.cs",
               "ToolTip": "C:\\UnityProjects\\UnityCopilot\\Assets\\Editor\\UnityCopilotWindow.cs",
               "RelativeToolTip": "Assets\\Editor\\UnityCopilotWindow.cs",
-              "ViewState": "AgIAAAIAAAAAAAAAAAAUwBIAAAAGAAAAAAAAAA==",
+              "ViewState": "AgIAABUBAAAAAAAAAAAuwCQBAAAHAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-06-09T00:38:41.669Z",
               "EditorCaption": ""

@@ -35,6 +35,11 @@ public class UnityCopilotWindow : EditorWindow
         }
     }
 
+    private static void RunActions(IEnumerable<ActionRequest> actions)
+    {
+        ExecuteActions(actions);
+    }
+
     private void OnGUI()
     {
         GUILayout.Label("Unity Copilot", EditorStyles.boldLabel);
@@ -73,7 +78,7 @@ public class UnityCopilotWindow : EditorWindow
         string llmJson = await CallLlm(userPrompt);
         _raw = llmJson;
 
-        llmJson = ExtractJsonBlock(llmJson);
+        llmJson = FirstJsonObject(llmJson);
         llmJson = QuotePropertyNames(llmJson);
 
         LlmReply reply;
@@ -86,10 +91,21 @@ public class UnityCopilotWindow : EditorWindow
         _explanation = reply.explanation;
         Repaint();
 
-        void AfterCompile(object _) { ExecuteActions(reply.actions); CompilationPipeline.compilationFinished -= AfterCompile; }
-        CompilationPipeline.compilationFinished += AfterCompile;
-
+        CompilationPipeline.compilationFinished += OnCompileFinished;
+        SessionState.SetString("CopilotPendingActions", JsonConvert.SerializeObject(reply));
         AssetDatabase.Refresh();
+
+        void OnCompileFinished(object _)
+        {
+            CompilationPipeline.compilationFinished -= OnCompileFinished;
+            AssemblyReloadEvents.afterAssemblyReload += AfterReload;
+        }
+
+        void AfterReload()
+        {
+            AssemblyReloadEvents.afterAssemblyReload -= AfterReload;
+            ExecuteActions(reply.actions);
+        }
     }
 
     // HTTP
@@ -120,11 +136,15 @@ public class UnityCopilotWindow : EditorWindow
         {
             if (string.IsNullOrWhiteSpace(f?.path) ||
                 string.IsNullOrWhiteSpace(f?.content))
-                continue;                    // ignore junk
+                continue;
 
-            Directory.CreateDirectory(Path.GetDirectoryName(f.path) ?? "Assets");
-            File.WriteAllText(f.path, RoslynFormatter.FormatCSharp(f.content));
-            Debug.Log("Wrote " + f.path);
+            var fullPath = f.path.StartsWith("Assets/")
+                         ? f.path
+                         : Path.Combine("Assets", f.path);
+
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+            File.WriteAllText(fullPath, RoslynFormatter.FormatCSharp(f.content));
+            Debug.Log("Wrote " + fullPath);
         }
     }
 
@@ -188,6 +208,7 @@ public class UnityCopilotWindow : EditorWindow
                             prop.Value["materialColor"].ToString(), out Color col))
                     {
                         var mat = new Material(Shader.Find("Standard")) { color = col };
+                        AssetDatabase.AddObjectToAsset(mat, go);
                         r.sharedMaterial = mat;
                     }
                 }
@@ -208,7 +229,11 @@ public class UnityCopilotWindow : EditorWindow
             Undo.AddComponent<MeshRenderer>(go);
         }
 
-        // 4. Finalise
+        // 4.  Give a material if still none
+        if (go.TryGetComponent<Renderer>(out var rend))
+            CopilotFallbacks.EnsureDefaultMaterial(rend);
+
+        // 5. Finalise
         Undo.RegisterCreatedObjectUndo(go, "Copilot create GameObject");
         Selection.activeObject = go;
     }
@@ -230,19 +255,63 @@ public class UnityCopilotWindow : EditorWindow
 #endif
 
         if (t == null) { Debug.LogWarning($"Component '{typeName}' not found"); return null; }
-        return Undo.AddComponent(go, t);        // ensures proper undo
+        var existing = go.GetComponent(t);
+        if (existing) return existing;
+
+        return Undo.AddComponent(go, t);
     }
 
     // salvage helpers
-    private static string ExtractJsonBlock(string text)
+    private static string FirstJsonObject(string text)
     {
-        int start = text.IndexOf('{');
-        int end = text.LastIndexOf('}');
-        return (start >= 0 && end > start) ? text.Substring(start, end - start + 1) : text;
+        int depth = 0, start = -1;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (c == '{')
+            {
+                if (depth == 0) start = i;
+                depth++;
+            }
+            else if (c == '}')
+            {
+                depth--;
+                if (depth == 0 && start != -1)
+                    return text.Substring(start, i - start + 1);
+            }
+        }
+        // fallback: whole string (will still throw, but the error is clearer)
+        return text;
     }
     private static string QuotePropertyNames(string json)
     {
         return System.Text.RegularExpressions.Regex.Replace(
             json, @"(?<=[,{]\s*)([A-Za-z_][A-Za-z0-9_]*)(?=\s*:)", "\"$1\"");
+    }
+
+    [InitializeOnLoad]
+    static class CopilotPostReload
+    {
+        private const string KEY = "CopilotPendingActions";
+
+        static CopilotPostReload()
+        {
+            // Is there a stored action list?
+            string json = SessionState.GetString(KEY, null);
+            if (string.IsNullOrEmpty(json)) return;
+
+            SessionState.EraseString(KEY);
+
+            try
+            {
+                var reply = JsonConvert.DeserializeObject<UnityCopilotWindow.LlmReply>(json);
+                UnityCopilotWindow.RunActions(reply.actions);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError("Copilot: failed to replay actions after reload\n" + ex);
+            }
+        }
     }
 }

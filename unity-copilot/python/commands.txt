@@ -1,6 +1,6 @@
-uvicorn backend.app.api:app --reload --port 8000
+uvicorn python.main:app --reload --port 8000
 
 prompts:
 Create a coroutine that rotates any object 30 deg/s and reverses after
 5 seconds. Make a GameObject called SpinningCube with a blue material
-and attach the script. Return JSON only.
+and attach the script.
