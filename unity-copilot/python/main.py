@@ -12,58 +12,85 @@ CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*([\s\S]*?)```$", re.MULTILINE)
 
 # Prompt pieces
 SYSTEM_HEADER = """\
-You are UnityCopilot, a Unity-specific coding assistant.
-RULES:
-You MUST return exactly one valid JSON object and NOTHING else. 
-No markdown, no comments, no trailing characters.
-Property names exactly: "files", "actions", "explanation".
-SCHEMA:
+You are **UnityCopilot**, an assistant that writes Unity-C# code and returns
+Build-Instructions as JSON ONLY.
+
+OUTPUT RULES
+• ONE and only one JSON object – no markdown, no comments.
+• Valid JSON5/ECMA-404 – no trailing commas, property names in double quotes.
+• Top-level properties: "files", "actions", "explanation".
+
+SCHEMA (types & semantics)
 {
-  "files":[{"path":"<string>","content":"<string>"}],
-  "actions":[{"type":"create_gameobject","name":"<string>","components":[ ... ]}],
-  "explanation":"<string>"
+  "files": [               // optional
+    {
+      "path": "Assets/... .cs | .shader | .asmdef | .json | .txt",
+      "content": "UTF-8 string (escape \\n, \\t, \\")"
+    }
+  ],
+  "actions": [             // optional
+    {
+      "type": "create_gameobject",
+      "name": "<GameObject-name>",
+      "components": [      // order ≈ AddComponent order
+        {"primitive":"Cube|Sphere|Capsule|Plane|..."} ,  // optional helper
+        "MeshRenderer",
+        {"Renderer":{"materialColor":"#ff3366"}},
+        "MyCustomBehaviour"               // MUST match a generated .cs file
+      ]
+    }
+  ],
+  "explanation": "1-2 sentence summary for the human"
 }
 
-Example of a Default Unity Script:
+ALWAYS start every C# file with:
+
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
-public class Test : MonoBehaviour
-{
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-}
-Example of user input and what your output should be:
+SEVERITY
+If you output anything that is not valid JSON → the build breaks.
 """
 
 FEW_SHOTS = [
-  { "role":"user",
-    "content":"make a blue spinning cube" },
-  { "role":"assistant",
-    "content": r'''{
+  # 1. Primitive cube with script
+  {"role":"user",
+   "content":"make a blue spinning cube"},
+  {"role":"assistant",
+   "content":"""{
   "files":[
     {"path":"Assets/Scripts/SpinningCube.cs",
-     "content":"using UnityEngine;\nusing System.Collections;\n\npublic class SpinningCube : MonoBehaviour {\n  private float speed = 30f;\n  private IEnumerator Start() {\n    float t = 0f;\n    while (true) {\n      bool reverse = t >= 5f;\n      transform.Rotate(Vector3.up, (reverse?-speed:speed) * Time.deltaTime);\n      t += Time.deltaTime;\n      yield return null;\n    }\n  }\n}"}],
+     "content":"using UnityEngine;\nusing System.Collections;\nusing System.Collections.Generic;\n\npublic class SpinningCube : MonoBehaviour { … }"}
+  ],
   "actions":[
     {"type":"create_gameobject",
      "name":"SpinningCube",
-     "components":[
-       {"primitive":"Cube"},
-       {"Renderer":{"materialColor":"#0066ff"}},
-       "SpinningCube"
-     ]}],
-  "explanation":"Creates a blue cube and rotates it 30°/s, reversing after 5 s."
-}''' }
+     "components":[ {"primitive":"Cube"}, {"Renderer":{"materialColor":"#0066ff"}}, "SpinningCube" ]
+    }
+  ],
+  "explanation":"Blue cube that spins 30 °/s."
+}"""
+  },
+
+  # 2. Audio + Rigidbody
+  {"role":"user",
+   "content":"create a bouncing ball that plays a sound on collision"},
+  {"role":"assistant",
+   "content":"""{
+  "files":[
+    {"path":"Assets/Scripts/BouncyBall.cs",
+     "content":"using UnityEngine; public class BouncyBall : MonoBehaviour { public AudioClip clip; void OnCollisionEnter(){ AudioSource.PlayClipAtPoint(clip, transform.position);} }"}
+  ],
+  "actions":[
+    {"type":"create_gameobject",
+     "name":"BouncyBall",
+     "components":[ {"primitive":"Sphere"}, "Rigidbody", "AudioSource", "BouncyBall" ]
+    }
+  ],
+  "explanation":"Adds Rigidbody + sound trigger."
+}"""
+  }
 ]
 
 # FastAPI boilerplate
@@ -84,10 +111,12 @@ def health(): return {"ok": True}
 def chat(req: ChatRequest):
     # 1. retrieve docs for last user message
     docs = "\n---\n".join(retrieve(req.messages[-1]["content"]))
-    system_with_docs = SYSTEM_HEADER + "\nRELEVANT_UNITY_DOCS:\n" + docs[:1500]
+    system_with_docs = SYSTEM_HEADER + "\n\nRELEVANT_UNITY_DOCS:\n" + docs[:1500]
 
     # 2. assemble final messages list
-    messages = [{"role":"system","content": system_with_docs}] + FEW_SHOTS + req.messages
+    messages = [
+    {"role":"system", "content": system_with_docs},
+] + FEW_SHOTS + req.messages
 
     payload = {
         "model": MODEL,
@@ -122,7 +151,6 @@ def comma_patch(text: str) -> str:
     return text
 
 def validated_json(text: str) -> str:
-    """Return a *valid* JSON string or raise ValueError."""
     text = strip_code_fence(text)
     text = comma_patch(text)
 

@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -12,9 +11,12 @@ using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
+using CAssembly = UnityEditor.Compilation.Assembly;
 
 public class UnityCopilotWindow : EditorWindow
 {
+    private const string KEY = "CopilotPendingActions";
+
     private string _prompt = "Ask Copilot…";
     private string _explanation = "";
     private string _raw = "";
@@ -92,8 +94,8 @@ public class UnityCopilotWindow : EditorWindow
         Repaint();
 
         CompilationPipeline.compilationFinished += OnCompileFinished;
-        SessionState.SetString("CopilotPendingActions", JsonConvert.SerializeObject(reply));
-        AssetDatabase.Refresh();
+        SessionState.SetString(KEY, JsonConvert.SerializeObject(reply.actions));
+        AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
 
         void OnCompileFinished(object _)
         {
@@ -143,7 +145,9 @@ public class UnityCopilotWindow : EditorWindow
                          : Path.Combine("Assets", f.path);
 
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-            File.WriteAllText(fullPath, RoslynFormatter.FormatCSharp(f.content));
+            File.WriteAllText(fullPath,
+                RoslynFormatter.FormatCSharp(
+                    CopilotFallbacks.EnsureUnityUsings(f.content)));
             Debug.Log("Wrote " + fullPath);
         }
     }
@@ -208,7 +212,16 @@ public class UnityCopilotWindow : EditorWindow
                             prop.Value["materialColor"].ToString(), out Color col))
                     {
                         var mat = new Material(Shader.Find("Standard")) { color = col };
-                        AssetDatabase.AddObjectToAsset(mat, go);
+
+                        // write material to disk
+                        const string folder = "Assets/Materials";
+                        if (!AssetDatabase.IsValidFolder(folder))
+                            AssetDatabase.CreateFolder("Assets", "Materials");
+
+                        string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/{go.name}_Mat.mat");
+                        AssetDatabase.CreateAsset(mat, path);
+                        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
                         r.sharedMaterial = mat;
                     }
                 }
@@ -261,7 +274,6 @@ public class UnityCopilotWindow : EditorWindow
         return Undo.AddComponent(go, t);
     }
 
-    // salvage helpers
     private static string FirstJsonObject(string text)
     {
         int depth = 0, start = -1;
@@ -290,28 +302,70 @@ public class UnityCopilotWindow : EditorWindow
             json, @"(?<=[,{]\s*)([A-Za-z_][A-Za-z0-9_]*)(?=\s*:)", "\"$1\"");
     }
 
-    [InitializeOnLoad]
-    static class CopilotPostReload
+    [InitializeOnLoadMethod]
+    static void AfterScriptsReloaded()
     {
-        private const string KEY = "CopilotPendingActions";
+        var json = SessionState.GetString(KEY, null);
+        if (string.IsNullOrEmpty(json)) return;
+        SessionState.EraseString(KEY);
 
-        static CopilotPostReload()
+        // delay one tick so TypeCache is warm
+        EditorApplication.delayCall += () =>
         {
-            // Is there a stored action list?
-            string json = SessionState.GetString(KEY, null);
-            if (string.IsNullOrEmpty(json)) return;
-
-            SessionState.EraseString(KEY);
+            if (HasCompileErrors())
+            {
+                Debug.LogError("Copilot: compile errors detected – actions skipped");
+                return;
+            }
 
             try
             {
-                var reply = JsonConvert.DeserializeObject<UnityCopilotWindow.LlmReply>(json);
-                UnityCopilotWindow.RunActions(reply.actions);
+                var actions = JsonConvert.DeserializeObject<List<ActionRequest>>(json);
+                ExecuteActions(actions);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                Debug.LogError("Copilot: failed to replay actions after reload\n" + ex);
+                Debug.LogError("Copilot: failed to replay actions\n" + ex);
             }
+        };
+    }
+
+    static bool HasCompileErrors()
+    {
+        // 1. Try the modern property (2022.2+)
+        foreach (var asm in UnityEditor.Compilation.CompilationPipeline.GetAssemblies())
+        {
+            var prop = asm.GetType().GetProperty("compilerMessages");
+            if (prop == null) continue;
+
+            var msgs = prop.GetValue(asm) as UnityEditor.Compilation.CompilerMessage[];
+            if (msgs != null && msgs.Any(m =>
+                     m.type == UnityEditor.Compilation.CompilerMessageType.Error))
+                return true;
         }
+
+        // 2. Legacy fallback (2021 / 2022.1) – scan Console log
+        System.Type logEntries = System.Type.GetType("UnityEditor.LogEntries, UnityEditor.dll");
+        if (logEntries == null) return false;
+
+        int count = (int)logEntries.GetMethod("GetCount").Invoke(null, null);
+        var entry = System.Activator.CreateInstance(
+                       System.Type.GetType("UnityEditor.LogEntry, UnityEditor.dll"));
+
+        var start = logEntries.GetMethod("StartGettingEntries");
+        var end = logEntries.GetMethod("EndGettingEntries");
+        var get = logEntries.GetMethod("GetEntryInternal");
+
+        start.Invoke(null, null);
+        bool hasError = false;
+        for (int i = 0; i < count && !hasError; i++)
+        {
+            get.Invoke(null, new object[] { i, entry });
+            // LogEntry.mode bit-flag: 2 == error
+            int mode = (int)entry.GetType().GetField("mode").GetValue(entry);
+            hasError = (mode & 2) != 0;
+        }
+        end.Invoke(null, null);
+        return hasError;
     }
 }

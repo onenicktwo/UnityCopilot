@@ -19,5 +19,16 @@ static class CopilotFallbacks
         r.sharedMaterial = new Material(Shader.Find("Standard"));
 #endif
     }
+
+    public static string EnsureUnityUsings(string src)
+    {
+        if (!src.Contains("using System.Collections;"))
+            src = "using System.Collections;\n" + src;
+        if (!src.Contains("using System.Collections.Generic;"))
+            src = "using System.Collections.Generic;\n" + src;
+        if (!src.Contains("using UnityEngine;"))
+            src = "using UnityEngine;\n" + src;
+        return src;
+    }
 }
 

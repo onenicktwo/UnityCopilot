@@ -1,18 +1,20 @@
-using UnityEngine;
+using System.Collections.Generic;
 using System.Collections;
+using UnityEngine;
 
 public class SpinningCube : MonoBehaviour
 {
-    private float speed = 30f;
-    private IEnumerator Start()
+    IEnumerator Rotate()
     {
-        float t = 0f;
         while (true)
         {
-            bool reverse = t >= 5f;
-            transform.Rotate(Vector3.up, (reverse ? -speed : speed) * Time.deltaTime);
-            t += Time.deltaTime;
-            yield return null;
+            transform.Rotate(0, 30, 0);
+            yield return new WaitForSeconds(5);
         }
+    }
+
+    void Start()
+    {
+        StartCoroutine(Rotate());
     }
 }
