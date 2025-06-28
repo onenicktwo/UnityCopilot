@@ -77,6 +77,7 @@
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\vb\it\Microsoft.CodeAnalysis.Analyzers.resources.dll" />
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\vb\Microsoft.CodeAnalysis.Analyzers.dll" />
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\cs\tr\Microsoft.CodeAnalysis.Analyzers.resources.dll" />
+    <Analyzer Include="C:\UnityProjects\UnityCopilot\Library\PackageCache\com.unity.ext.nunit@2.0.3\net40\unity-custom\nunit.framework.dll" />
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\cs\ko\Microsoft.CodeAnalysis.Analyzers.resources.dll" />
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\vb\es\Microsoft.CodeAnalysis.Analyzers.resources.dll" />
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\vb\pl\Microsoft.CodeAnalysis.Analyzers.resources.dll" />
@@ -486,7 +487,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="nunit.framework">
-      <HintPath>Library\PackageCache\com.unity.ext.nunit@1.0.6\net35\unity-custom\nunit.framework.dll</HintPath>
+      <HintPath>Library\PackageCache\com.unity.ext.nunit@2.0.3\net40\unity-custom\nunit.framework.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json">

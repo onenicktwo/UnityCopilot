@@ -83,6 +83,7 @@
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\cs\pt-BR\Microsoft.CodeAnalysis.Analyzers.resources.dll" />
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\cs\it\Microsoft.CodeAnalysis.Analyzers.resources.dll" />
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\cs\pl\Microsoft.CodeAnalysis.Analyzers.resources.dll" />
+    <Analyzer Include="C:\UnityProjects\UnityCopilot\Library\PackageCache\com.unity.ext.nunit@1.0.6\net35\unity-custom\nunit.framework.dll" />
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\vb\zh-Hans\Microsoft.CodeAnalysis.Analyzers.resources.dll" />
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\cs\ja\Microsoft.CodeAnalysis.Analyzers.resources.dll" />
     <Analyzer Include="C:\UnityProjects\UnityCopilot\Assets\Packages\Microsoft.CodeAnalysis.Analyzers.3.11.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.Analyzers.dll" />
